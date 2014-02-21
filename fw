@@ -1,0 +1,81 @@
+#!/bin/bash
+
+# iptables service
+IPT="/sbin/iptables"
+
+# TCP ports allowed
+TCP_ALLOWED_PORTS_IN="21,25"
+TCP_ALLOWED_PORTS_OUT="21,22,25,43,443,53,80,3421"
+
+# UDP ports allowed
+UDP_ALLOWED_PORTS_IN=""
+UDP_ALLOWED_PORTS_OUT="53"
+
+# WEB service limits - how many concurrent connections allowed
+WEB_LIMIT="25"
+
+# SERVER settings
+SERVER_IP=192.168.1.1
+PUB_IF="eth0"
+
+# CLEAR ALL RULES
+$IPT -F
+$IPT -X
+
+# LOAD MODULES
+modprobe ip_conntrack
+
+# loobpack
+$IPT -A INPUT -i lo -j ACCEPT
+$IPT -A OUTPUT -o lo -j ACCEPT
+
+# INCOMING TRAFFIC
+
+# INCOMING TRAFFIC - stateful filtering
+$IPT -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+
+# INCOMING TRAFFIC - invalid packets
+$IPT -A INPUT -m conntrack --ctstate INVALID -j LOG --log-prefix "IPTables IN DROP INVALID: " --log-ip-options --log-tcp-options -m comment  --comment "DROPPED_INVALID_IN"
+
+
+# ICOMING TRAFFIC - web service limits
+if [ -n "$WEB_LIMIT" ]; then
+$IPT -A INPUT -p tcp --syn --dport 80 -m connlimit --connlimit-above $WEB_LIMIT -j LOG --log-prefix "IPTables DROP APACHE: " --log-ip-options --log-tcp-options -m comment --comment "DROPPED_APACHE"
+$IPT -A INPUT -p tcp --syn --dport 80 -m connlimit --connlimit-above $WEB_LIMIT -j DROP
+fi
+
+# INCOMING TRAFFIC - tcp/udp services
+if [ -n "$TCP_ALLOWED_PORTS_IN" ]; then
+$IPT -A INPUT -p tcp -m multiport --dports $TCP_ALLOWED_PORTS_IN --syn -m conntrack --ctstate NEW -j ACCEPT
+fi
+
+if [ -n "$UDP_ALLOWED_PORTS_IN" ]; then
+$IPT -A INPUT -p udp -m multiport --dports $UDP_ALLOWED_PORTS_IN --syn -m conntrack --ctstate NEW -j ACCEPT
+fi
+
+
+# INCOMING TRAFFIC - log dropped
+$IPT -A INPUT ! -i lo -j LOG --log-prefix "IPTables IN DROP: " --log-ip-options --log-tcp-options -m comment --comment "DROPPED_IN"
+
+# OUTGOING TRAFFIC
+$IPT -A OUTPUT -m conntrack --ctstate INVALID -j LOG --log-prefix "IPTables OUT DROP INVALID: " --log-ip-options --log-tcp-options -m comment --comment "DROPPED_INVALID_OUT"
+$IPT -A OUTPUT -m conntrack --ctstate INVALID -j DROP
+$IPT -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+
+# OUTGOING TRAFFIC - TCP/UDP SERVICES
+
+if [ -n "$TCP_ALLOWED_PORTS_OUT" ]; then
+$IPT -A OUTPUT -p tcp -m multiport --dports $TCP_ALLOWED_PORTS_OUT --syn -m conntrack --ctstate NEW -j ACCEPT
+fi
+
+if [ -n "$UDP_ALLOWED_PORTS_OUT" ]; then
+$IPT -A OUTPUT -p udp -m multiport --dports $UDP_ALLOWED_PORTS_OUT -m conntrack --ctstate NEW -j ACCEPT
+fi
+
+# OUTGOING TRAFFIC - log dropped
+$IPT -A OUTPUT ! -o lo -j LOG --log-prefix "IPTables OUT DROP: " --log-ip-options --log-tcp-options -m comment --comment "DROPPED_OUT"
+
+# DEFAULT DROP
+$IPT -P INPUT DROP
+$IPT -P FORWARD DROP
+$IPT -P OUTPUT DROP
