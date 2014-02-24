@@ -45,7 +45,7 @@ fi
 
 fi
 
-iptables -L -vn | grep -w "DROPPED_IN" | awk '{print "in.value " $1; exit 0;}'
-iptables -L -vn | grep -w "DROPPED_APACHE" | awk '{print "apache.value " $1; exit 0;}'
-iptables -L -vn | grep -w "DROPPED_OUT" | awk '{print "out.value " $1; exit 0;}'
-iptables -L -vn | grep -w "DROPPED_INVALID_IN" | awk '{print "in_invalid.value " $1; exit 0;}'
+iptables -L -vn -x | grep -w "DROPPED_IN" | awk '{print "in.value " $1; exit 0;}'
+iptables -L -vn -x | grep -w "DROPPED_APACHE" | awk '{print "apache.value " $1; exit 0;}'
+iptables -L -vn -x | grep -w "DROPPED_OUT" | awk '{print "out.value " $1; exit 0;}'
+iptables -L -vn -x | grep -w "DROPPED_INVALID_IN" | awk '{print "in_invalid.value " $1; exit 0;}'
