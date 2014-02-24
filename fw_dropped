@@ -10,6 +10,7 @@ echo 'graph_args --base 1000 -l 0'
 # DROPPED_IN
 echo 'in.label IN'
 echo 'in.type DERIVE'
+echo 'in.min 0'
 if [ -n "$in_warning" ]; then
  echo "in.warning $in_warning"
 else
@@ -19,6 +20,7 @@ fi
 # DROPPED INVALID IN
 echo 'in_invalid.label IN-INVALID'
 echo 'in_invalid.type DERIVE'
+echo 'in_invalid.min 0'
 if [ -n "$in_invalid_warning" ]; then
  echo "in_invalid.warning $in_invalid_warning"
 else
@@ -28,6 +30,7 @@ fi
 # DROPPED OUT
 echo 'out.label OUT'
 echo 'out.type DERIVE'
+echo 'out.min 0'
 if [ -n "$out_warning" ]; then
  echo "out.warning $out_warning"
 else
@@ -37,6 +40,7 @@ fi
 # DROPPED ApACHE IN
 echo 'apache.label APACHE'
 echo 'apache.type DERIVE'
+echo 'apache.min 0'
 if [ -n "$apache_warning" ]; then
  echo "apache.warning $apache_warning"
 else
