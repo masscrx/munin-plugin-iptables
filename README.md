@@ -44,7 +44,7 @@ Please be prepared that iptables log file could gain big size after some time, o
 2.Restart rsyslog service - /etc/init.d/rsyslog restart
 
 #### Iptables
-1.Change file ./fw for your needs
+1.Change file settings.conf for your needs
 
 2.Execute fw file
 

@@ -1,81 +1,96 @@
 #!/bin/bash
 
-# iptables service
-IPT="/sbin/iptables"
-
-# TCP ports allowed
-TCP_ALLOWED_PORTS_IN="21,25"
-TCP_ALLOWED_PORTS_OUT="21,22,25,43,443,53,80,3421"
-
-# UDP ports allowed
-UDP_ALLOWED_PORTS_IN=""
-UDP_ALLOWED_PORTS_OUT="53"
-
-# WEB service limits - how many concurrent connections allowed
-WEB_LIMIT="25"
-
-# SERVER settings
-SERVER_IP=192.168.1.1
-PUB_IF="eth0"
+echo "Reading config...." >&2
+source settings.conf
 
 # CLEAR ALL RULES
-$IPT -F
-$IPT -X
+iptables -F
+iptables -X
+iptables -Z
+
+# CREATE RULE LIST
+iptables -N NO_SYNFLOOD
+iptables -N SYNFLOOD_CHECK
+iptables -N SYNFLOOD_DETECTED
 
 # LOAD MODULES
 modprobe ip_conntrack
 
 # loobpack
-$IPT -A INPUT -i lo -j ACCEPT
-$IPT -A OUTPUT -o lo -j ACCEPT
+iptables -A INPUT -i lo -j ACCEPT
+iptables -A OUTPUT -o lo -j ACCEPT
 
-# INCOMING TRAFFIC
+# 1.INCOMING TRAFFIC
 
-# INCOMING TRAFFIC - stateful filtering
-$IPT -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+# 1.a) INCOMING TRAFFIC - stateful filtering
+iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 
-# INCOMING TRAFFIC - invalid packets
-$IPT -A INPUT -m conntrack --ctstate INVALID -j LOG --log-prefix "IPTables IN DROP INVALID: " --log-ip-options --log-tcp-options -m comment  --comment "DROPPED_INVALID_IN"
+# 1.b) INCOMING TRAFFIC - invalid packets
+iptables -A INPUT -m conntrack --ctstate INVALID -j LOG --log-prefix "IPTables IN DROP INVALID: " -m limit \
+--limit $LOG_LIMIT --limit-burst $LOG_BURST --log-ip-options --log-tcp-options -m comment  --comment "DROPPED_INVALID_IN"
+
+# 1.e) INCOMING TRAFFIC - check for syn flood attack
+iptables -A INPUT -p tcp --syn -j SYNFLOOD_CHECK
 
 
-# ICOMING TRAFFIC - web service limits
-if [ -n "$WEB_LIMIT" ]; then
-$IPT -A INPUT -p tcp --syn --dport 80 -m connlimit --connlimit-above $WEB_LIMIT -j LOG --log-prefix "IPTables DROP APACHE: " --log-ip-options --log-tcp-options -m comment --comment "DROPPED_APACHE"
-$IPT -A INPUT -p tcp --syn --dport 80 -m connlimit --connlimit-above $WEB_LIMIT -j DROP
+# 1.c) INCOMING TRAFFIC - SYNFLOOD_CHECK
+iptables -A SYNFLOOD_CHECK -m recent --name banned --rsource --rcheck -j SYNFLOOD_DETECTED
+iptables -A SYNFLOOD_CHECK -p tcp --syn -m hashlimit --hashlimit-above $SYN_LIMIT_S --hashlimit-burst $SYN_BURST \
+--hashlimit-htable-expire $HTABLE_EXPIRE --hashlimit-mode $HASH_MODE --hashlimit-name synflood -j SYNFLOOD_DETECTED
+
+iptables -A SYNFLOOD_CHECK -j NO_SYNFLOOD
+
+# 1.d) INCOMING TRAFFIC - SYNFLOOD_DETECTED
+
+iptables -A SYNFLOOD_DETECTED -m limit --limit $LOG_LIMIT --limit-burst $LOG_BURST -j LOG --log-prefix "IPTables Synflood: " --log-ip-options --log-tcp-options 
+iptables -A SYNFLOOD_DETECTED -m recent --name banned --rsource --set -j REJECT -m comment  --comment "DROPPED_SYNFLOOD"
+
+
+# 1.e) ICOMING TRAFFIC - web service limits
+if [ -n "25" ]; then
+
+iptables -A NO_SYNFLOOD -p tcp --syn --dport 80 -m connlimit --connlimit-above $WEB_LIMIT -j LOG --log-prefix \
+"IPTables DROP APACHE: " -m limit --limit $LOG_LIMIT --limit-burst $LOG_BURST --log-ip-options --log-tcp-options
+iptables -A NO_SYNFLOOD -p tcp --syn --dport 80 -m connlimit --connlimit-above $WEB_LIMIT -j DROP -m comment --comment "DROPPED_APACHE"
 fi
 
-# INCOMING TRAFFIC - tcp/udp services
+# 1.f) ALLOWED INCOMING TRAFFIC - tcp/udp services
 if [ -n "$TCP_ALLOWED_PORTS_IN" ]; then
-$IPT -A INPUT -p tcp -m multiport --dports $TCP_ALLOWED_PORTS_IN --syn -m conntrack --ctstate NEW -j ACCEPT
+iptables -A NO_SYNFLOOD -p tcp -m multiport --dports $TCP_ALLOWED_PORTS_IN --syn -m conntrack --ctstate NEW -j ACCEPT
 fi
 
 if [ -n "$UDP_ALLOWED_PORTS_IN" ]; then
-$IPT -A INPUT -p udp -m multiport --dports $UDP_ALLOWED_PORTS_IN --syn -m conntrack --ctstate NEW -j ACCEPT
+iptables -A NO_SYNFLOOD -p udp -m multiport --dports $UDP_ALLOWED_PORTS_IN -j ACCEPT
 fi
 
+# 1.g) INCOMING TRAFFIC - log dropped
+iptables -A NO_SYNFLOOD ! -i lo -m limit --limit $LOG_LIMIT --limit-burst $LOG_BURST -j LOG --log-prefix \
+"IPTables IN DROP: " --log-ip-options --log-tcp-options
+iptables -A NO_SYNFLOOD -j DROP -m comment --comment "DROPPED_IN"
 
-# INCOMING TRAFFIC - log dropped
-$IPT -A INPUT ! -i lo -j LOG --log-prefix "IPTables IN DROP: " --log-ip-options --log-tcp-options -m comment --comment "DROPPED_IN"
+
 
 # OUTGOING TRAFFIC
-$IPT -A OUTPUT -m conntrack --ctstate INVALID -j LOG --log-prefix "IPTables OUT DROP INVALID: " --log-ip-options --log-tcp-options -m comment --comment "DROPPED_INVALID_OUT"
-$IPT -A OUTPUT -m conntrack --ctstate INVALID -j DROP
-$IPT -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+iptables -A OUTPUT -m conntrack --ctstate INVALID -j LOG -m limit --limit $LOG_LIMIT --limit-burst $LOG_BURST --log-prefix "IPTables OUT DROP INVALID: " \
+ --log-ip-options --log-tcp-options -m comment --comment "DROPPED_INVALID_OUT"
+iptables -A OUTPUT -m conntrack --ctstate INVALID -j DROP
+iptables -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 
 # OUTGOING TRAFFIC - TCP/UDP SERVICES
 
 if [ -n "$TCP_ALLOWED_PORTS_OUT" ]; then
-$IPT -A OUTPUT -p tcp -m multiport --dports $TCP_ALLOWED_PORTS_OUT --syn -m conntrack --ctstate NEW -j ACCEPT
+iptables -A OUTPUT -p tcp -m multiport --dports $TCP_ALLOWED_PORTS_OUT --syn -m conntrack --ctstate NEW -j ACCEPT
 fi
 
 if [ -n "$UDP_ALLOWED_PORTS_OUT" ]; then
-$IPT -A OUTPUT -p udp -m multiport --dports $UDP_ALLOWED_PORTS_OUT -m conntrack --ctstate NEW -j ACCEPT
+iptables -A OUTPUT -p udp -m multiport --dports $UDP_ALLOWED_PORTS_OUT -m conntrack --ctstate NEW -j ACCEPT
 fi
 
 # OUTGOING TRAFFIC - log dropped
-$IPT -A OUTPUT ! -o lo -j LOG --log-prefix "IPTables OUT DROP: " --log-ip-options --log-tcp-options -m comment --comment "DROPPED_OUT"
+iptables -A OUTPUT ! -o lo -j LOG -m limit --limit $LOG_LIMIT --limit-burst $LOG_BURST --log-prefix "IPTables OUT DROP: " --log-ip-options --log-tcp-options \
+-m comment --comment "DROPPED_OUT"
 
 # DEFAULT DROP
-$IPT -P INPUT DROP
-$IPT -P FORWARD DROP
-$IPT -P OUTPUT DROP
+iptables -P INPUT DROP
+iptables -P FORWARD DROP
+iptables -P OUTPUT DROP

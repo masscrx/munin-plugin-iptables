@@ -3,49 +3,66 @@
 if [ "$1" = "config" ]; then
 
 echo 'graph_title IPtables drop packets'
-echo 'graph_vlabel packets per second'
+echo 'graph_vlabel packets per ${graph_period}'
 echo 'graph_category network'
+echo 'graph_scale no'
 echo 'graph_args --base 1000 -l 0'
+echo 'graph_period second'
 
 # DROPPED_IN
 echo 'in.label IN'
 echo 'in.type DERIVE'
+echo 'in.min 0'
 if [ -n "$in_warning" ]; then
  echo "in.warning $in_warning"
 else
- echo "in.warning 2"
+ echo "in.warning 10"
 fi
 
 # DROPPED INVALID IN
 echo 'in_invalid.label IN-INVALID'
 echo 'in_invalid.type DERIVE'
+echo 'in_invalid.min 0'
 if [ -n "$in_invalid_warning" ]; then
  echo "in_invalid.warning $in_invalid_warning"
 else
-echo "in_invalid.warning 2"
+echo "in_invalid.warning 10"
 fi
 
 # DROPPED OUT
 echo 'out.label OUT'
 echo 'out.type DERIVE'
+echo 'out.min 0'
 if [ -n "$out_warning" ]; then
  echo "out.warning $out_warning"
 else
  echo "out.warning 2"
 fi
 
-# DROPPED ApACHE IN
+# DROPPED APACHE IN
 echo 'apache.label APACHE'
 echo 'apache.type DERIVE'
+echo 'apache.min 0'
 if [ -n "$apache_warning" ]; then
  echo "apache.warning $apache_warning"
 else
- echo "apache.warning 2"
+ echo "apache.warning 50"
+fi
+
+# DROPPED SYNFLOOD IN
+echo 'synflood.label SYNFLOOD'
+echo 'synflood.type DERIVE'
+echo 'synflood.min 0'
+if [ -n "$synflood_warning" ]; then
+ echo "synflood.warning $synflood_warning"
+else
+ echo "synflood.warning 100"
 fi
 
 fi
 
-iptables -L -vn | grep -w "DROPPED_IN" | awk '{print "in.value " $1; exit 0;}'
-iptables -L -vn | grep -w "DROPPED_APACHE" | awk '{print "apache.value " $1; exit 0;}'
-iptables -L -vn | grep -w "DROPPED_OUT" | awk '{print "out.value " $1; exit 0;}'
-iptables -L -vn | grep -w "DROPPED_INVALID_IN" | awk '{print "in_invalid.value " $1; exit 0;}'
+iptables -L -vnx | grep -w "DROPPED_IN" | awk '{print "in.value " $1; exit 0;}'
+iptables -L -vnx | grep -w "DROPPED_APACHE" | awk '{print "apache.value " $1; exit 0;}'
+iptables -L -vnx | grep -w "DROPPED_OUT" | awk '{print "out.value " $1; exit 0;}'
+iptables -L -vnx | grep -w "DROPPED_INVALID_IN" | awk '{print "in_invalid.value " $1; exit 0;}'
+iptables -L -vnx | grep -w "DROPPED_SYNFLOOD" | awk '{print "synflood.value " $1; exit 0;}'
