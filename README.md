@@ -1,7 +1,7 @@
-munin-plugin
+munin-plugin + firewall (iptables)
 ============
 
-Munin plugin for counting iptables entries
+Munin plugin for counting dropped packets, and iptables rules for protect syn flood and restrict incoming traffic
 
 ### This packet include:
 
@@ -67,10 +67,45 @@ env.in_invalid_warning some_digit
 
 env.apache_warning some_digit
 
+env.synflood_warning some_digit
+
 
 
 * some_digit could be decimal or normal, for example 0.6 or 5, default this all warning values are set to 2
 
+
+# Benchmark:
+Simple statistics with use of this ruleset
+
+* siege -b -c 10 192.168.1.110/
+
+Normal - normal system resources usage
+
+1 - Under test, without rule set
+
+2 - Under test, with ruleset
+
+      |   Normal  |    1   |    2   |
+|:---:|:---------:|:------:|:------:|
+| CPU | 0.5 - 1 % |   50%  |   2%   |
+| SYS |   1 - 6%  | 35-50% |   7%   |
+| MEM |   290 MB  | 440 MB | 312 MB |
+
+* hping3 -S --flood 192.168.1.110
+
+Normal - normal system resources usage
+
+1 - Under test, without rule set
+
+2 - Under test, with ruleset
+
+      |   Normal  |    1   |    2   |
+|:---:|:---------:|:------:|:------:|
+| CPU | 0.5 - 1 % | 30-50% |  3-5%  |
+| SYS |   1 - 6%  | 15-40% |   7%   |
+| MEM |   290 MB  | 312 MB | 312 MB |
+
+So as you see, this ruleset protect against 'GET/HTTP attack', in new release I'll try to improve them to more protect against medium SYN attack.
 
 
 
