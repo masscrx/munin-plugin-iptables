@@ -61,6 +61,7 @@ fi
 
 fi
 
+
 iptables -L -vnx | grep -w "DROPPED_IN" | awk '{print "in.value " $1; exit 0;}'
 iptables -L -vnx | grep -w "DROPPED_APACHE" | awk '{print "apache.value " $1; exit 0;}'
 iptables -L -vnx | grep -w "DROPPED_OUT" | awk '{print "out.value " $1; exit 0;}'
