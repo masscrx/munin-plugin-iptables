@@ -1,7 +1,12 @@
-munin-plugin + firewall (iptables)
+munin-plugin + firewall (iptables) - 0.2
 ============
 
-Munin plugin for counting dropped packets, and iptables rules for protect syn flood and restrict incoming traffic
+Munin plugin for counting dropped packets, and iptables rules for protect syn flood and restrict incoming traffic.
+
+### Releases:
+0.1 - Basic ruleset with munin plugin
+
+0.2 - Added limits for logging, before without limits file growed up very fast (after 1 month - 300MB), I also added simple syn flood protection and new gauge to munin plugin
 
 ### This packet include:
 
@@ -21,7 +26,6 @@ Rsyslog folder with configuration files: **/etc/rsyslog.d/**
 
 Munin directory: **/etc/munin/**
 
-Please be prepared that iptables log file could gain big size after some time, on small webserver with 5 not big sites (average 1300 visits/month per site) it has 280MB size, but this depends on the many factors.
 
 
 # How it works?
@@ -30,7 +34,7 @@ Please be prepared that iptables log file could gain big size after some time, o
 - Firewall rules write to (specified in rsyslog's configuration) file, default to /var/log/iptables.log all dropped events
 
 #### Munin plugin
-- Munin plugin read iptables.log and count all dropped events
+- Munin plugin read iptables counters and count all dropped packets (appropriate rules are commented)
 
 # Configuration:
 
