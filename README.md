@@ -8,6 +8,10 @@ Munin plugin for counting dropped packets, and iptables rules for protect syn fl
 
 0.2 - Added limits for logging, before without limits file growed up very fast (after 1 month - 300MB), I also added simple syn flood protection and new gauge to munin plugin
 
+* Scheduled feauters:
+
+ - Tarpit protection (I hope so better syn flood protection)
+
 ### This packet include:
 
 1.Munin plugin written in bash
