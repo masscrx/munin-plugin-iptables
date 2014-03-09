@@ -38,6 +38,13 @@ iptables -A SYNFLOOD_CHECK -m recent --name banned --rsource --rcheck -j SYNFLOO
 iptables -A SYNFLOOD_CHECK -p tcp --syn -m hashlimit --hashlimit-above $SYN_LIMIT_S --hashlimit-burst $SYN_BURST \
 --hashlimit-htable-expire $HTABLE_EXPIRE --hashlimit-mode $HASH_MODE --hashlimit-name synflood -j SYNFLOOD_DETECTED
 
+iptables -A SYNFLOOD_CHECK -p tcp --syn -m hashlimit --hashlimit-above $SYN_LIMIT_M --hashlimit-burst $SYN_BURST \
+--hashlimit-htable-expire $HTABLE_EXPIRE --hashlimit-mode $HASH_MODE --hashlimit-name synflood -j SYNFLOOD_DETECTED
+
+iptables -A SYNFLOOD_CHECK -p tcp --syn -m hashlimit --hashlimit-above $SYN_LIMIT_H --hashlimit-burst $SYN_BURST \
+--hashlimit-htable-expire $HTABLE_EXPIRE --hashlimit-mode $HASH_MODE --hashlimit-name synflood -j SYNFLOOD_DETECTED
+
+
 iptables -A SYNFLOOD_CHECK -j NO_SYNFLOOD
 
 # 1.d) INCOMING TRAFFIC - SYNFLOOD_DETECTED
