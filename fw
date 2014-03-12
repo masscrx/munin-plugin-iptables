@@ -35,14 +35,13 @@ iptables -A INPUT -p tcp --syn -j SYNFLOOD_CHECK
 
 # 1.c) INCOMING TRAFFIC - SYNFLOOD_CHECK
 iptables -A SYNFLOOD_CHECK -m recent --name banned --rsource --rcheck -j SYNFLOOD_DETECTED
-iptables -A SYNFLOOD_CHECK -p tcp --syn -m hashlimit --hashlimit-above $SYN_LIMIT_S --hashlimit-burst $SYN_BURST \
+
+iptables -A SYNFLOOD_CHECK -p tcp --syn -m hashlimit --hashlimit-above $SYN_LIMIT --hashlimit-burst $SYN_BURST \
 --hashlimit-htable-expire $HTABLE_EXPIRE --hashlimit-mode $HASH_MODE --hashlimit-name synflood -j SYNFLOOD_DETECTED
 
-iptables -A SYNFLOOD_CHECK -p tcp --syn -m hashlimit --hashlimit-above $SYN_LIMIT_M --hashlimit-burst $SYN_BURST \
---hashlimit-htable-expire $HTABLE_EXPIRE --hashlimit-mode $HASH_MODE --hashlimit-name synflood -j SYNFLOOD_DETECTED
 
-iptables -A SYNFLOOD_CHECK -p tcp --syn -m hashlimit --hashlimit-above $SYN_LIMIT_H --hashlimit-burst $SYN_BURST \
---hashlimit-htable-expire $HTABLE_EXPIRE --hashlimit-mode $HASH_MODE --hashlimit-name synflood -j SYNFLOOD_DETECTED
+
+
 
 
 iptables -A SYNFLOOD_CHECK -j NO_SYNFLOOD
@@ -50,7 +49,9 @@ iptables -A SYNFLOOD_CHECK -j NO_SYNFLOOD
 # 1.d) INCOMING TRAFFIC - SYNFLOOD_DETECTED
 
 iptables -A SYNFLOOD_DETECTED -m limit --limit $LOG_LIMIT --limit-burst $LOG_BURST -j LOG --log-prefix "IPTables Synflood: " --log-ip-options --log-tcp-options 
-iptables -A SYNFLOOD_DETECTED -m recent --name banned --rsource --set -j REJECT -m comment  --comment "DROPPED_SYNFLOOD"
+iptables -A SYNFLOOD_DETECTED -m recent --name banned --rsource --set
+iptables -A SYNFLOOD_DETECTED -m recent --name banned --rsource --update
+iptables -A SYNFLOOD_DETECTED -m recent --name banned --rsource --rcheck -j REJECT -m comment  --comment "DROPPED_SYNFLOOD"
 
 
 # 1.e) ICOMING TRAFFIC - web service limits

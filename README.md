@@ -1,4 +1,4 @@
-munin-plugin + firewall (iptables) - 0.2
+munin-plugin + ddos synflood protection (iptables-hashlimits) - 0.2
 ============
 
 Munin plugin for counting dropped packets, and iptables rules for protect syn flood and restrict incoming traffic.
