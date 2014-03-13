@@ -1,0 +1,27 @@
+#!/bin/sh
+
+if [ "$1" = "config" ]; then
+
+echo 'graph_title IPtables banned hosts'
+echo 'graph_vlabel banned hosts per ${graph_period}'
+echo 'graph_category network'
+echo 'graph_scale no'
+echo 'graph_args --base 1000 -l 0'
+echo 'graph_period minute'
+
+# banned hosts
+echo 'banned.label Banned'
+echo 'banned.type DERIVE'
+echo 'banned.min 0'
+if [ -n "$banned_warning" ]; then
+ echo "banned.warning $banned_warning"
+else
+ echo "banned.warning 100"
+fi
+
+
+
+fi
+
+
+cat /proc/net/xt_recent/banned | wc -l | awk '{print "banned.value " $1; exit 0;}'

@@ -30,7 +30,7 @@ iptables -A INPUT -m conntrack --ctstate INVALID -j LOG --log-prefix "IPTables I
 --limit $LOG_LIMIT --limit-burst $LOG_BURST --log-ip-options --log-tcp-options -m comment  --comment "DROPPED_INVALID_IN"
 
 # 1.e) INCOMING TRAFFIC - check for syn flood attack
-iptables -A INPUT -p tcp --syn -j SYNFLOOD_CHECK
+iptables -A INPUT -p tcp --syn -j SYNFLOOD_CHECK -m comment --comment "SYN_PACKETS"
 
 
 # 1.c) INCOMING TRAFFIC - SYNFLOOD_CHECK
